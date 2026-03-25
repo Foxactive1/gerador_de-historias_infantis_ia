@@ -1,21 +1,39 @@
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
-
     const { prompt } = req.body;
 
+    const isDev = process.env.NODE_ENV !== 'production';
+
+    // 🟢 MODO DESENVOLVIMENTO (SEM CUSTO)
+    if (isDev) {
+        console.log("Modo DEV ativo - sem custo");
+
+        const fakeStory = `
+Era uma vez uma criança muito especial que adorava aventuras.
+
+Um dia, ela descobriu algo incrível relacionado a ${prompt.slice(0, 50)}...
+
+Com coragem e gentileza, aprendeu uma grande lição:
+${prompt.slice(-60)}
+
+E assim, terminou o dia feliz, pronta para novos sonhos.
+
+✨ Fim ✨
+        `;
+
+        return res.status(200).json({
+            story: fakeStory,
+            model_used: "mock-dev"
+        });
+    }
+
+    // 🔴 MODO PRODUÇÃO (COM API REAL)
     const models = [
         'mistralai/mistral-7b-instruct',
-        'openai/gpt-3.5-turbo',
-        'meta-llama/llama-3-8b-instruct',
-        'anthropic/claude-3.5-sonnet'
+        'openai/gpt-3.5-turbo'
     ];
 
     for (let model of models) {
         try {
-            console.log(`Tentando modelo: ${model}`);
-
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -27,29 +45,25 @@ export default async function handler(req, res) {
                 body: JSON.stringify({
                     model,
                     messages: [{ role: 'user', content: prompt }],
-                    max_tokens: 800 // 🔥 reduz custo aqui também
+                    max_tokens: 500
                 })
             });
 
             const data = await response.json();
 
-            if (!response.ok) {
-                console.warn(`Erro no modelo ${model}:`, data);
-                continue; // tenta próximo modelo
-            }
+            if (!response.ok) continue;
 
             return res.status(200).json({
                 story: data.choices[0].message.content,
                 model_used: model
             });
 
-        } catch (error) {
-            console.error(`Falha no modelo ${model}:`, error);
+        } catch (err) {
             continue;
         }
     }
 
     return res.status(500).json({
-        error: 'Todos os modelos falharam'
+        error: "Falha nos modelos"
     });
 }
