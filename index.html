@@ -584,9 +584,9 @@
             return data.choices[0].message.content;
         }
 
-       async function generateStory() {
+  async function generateStory() {
     formData.lesson = document.getElementById('lesson').value.trim();
-    
+
     if (!formData.lesson) {
         alert('Por favor, insira uma lição para a história.');
         return;
@@ -615,7 +615,7 @@ A história deve ser:
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.error || 'Erro');
+            throw new Error(data.error || 'Erro desconhecido');
         }
 
         document.getElementById('storyContent').innerHTML =
@@ -624,8 +624,10 @@ A história deve ser:
         nextStep(6);
 
     } catch (error) {
-        console.error(error);
-        alert('Erro ao gerar história. Tente novamente.');
+        console.error('Erro detalhado:', error);
+
+        alert(`Erro ao gerar história:\n${error.message}`);
+
         prevStep(4);
     }
 }
