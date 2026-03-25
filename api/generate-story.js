@@ -1,69 +1,82 @@
 export default async function handler(req, res) {
-    const { prompt } = req.body;
+    const { prompt, user_id } = req.body;
 
-    const isDev = process.env.NODE_ENV !== 'production';
+    if (!user_id) {
+        return res.status(401).json({ error: 'Não autenticado' });
+    }
 
-    // 🟢 MODO DESENVOLVIMENTO (SEM CUSTO)
-    if (isDev) {
-        console.log("Modo DEV ativo - sem custo");
+    // 🔹 Conectar Supabase (server-side)
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE;
 
-        const fakeStory = `
-Era uma vez uma criança muito especial que adorava aventuras.
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-Um dia, ela descobriu algo incrível relacionado a ${prompt.slice(0, 50)}...
+    // 🔹 Buscar plano do usuário
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('plan')
+        .eq('id', user_id)
+        .single();
 
-Com coragem e gentileza, aprendeu uma grande lição:
-${prompt.slice(-60)}
+    const today = new Date().toISOString().slice(0, 10);
 
-E assim, terminou o dia feliz, pronta para novos sonhos.
+    // 🔹 Verificar uso diário
+    const { data: usageData } = await supabase
+        .from('usage')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('date', today)
+        .single();
 
-✨ Fim ✨
-        `;
+    const limit = profile?.plan === 'pro' ? 100 : 3;
 
-        return res.status(200).json({
-            story: fakeStory,
-            model_used: "mock-dev"
+    if (usageData && usageData.count >= limit) {
+        return res.status(403).json({
+            error: 'Limite diário atingido'
         });
     }
 
-    // 🔴 MODO PRODUÇÃO (COM API REAL)
-    const models = [
-        'mistralai/mistral-7b-instruct',
-        'openai/gpt-3.5-turbo'
-    ];
+    // 🔹 Chamada OpenAI
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 500
+        })
+    });
 
-    for (let model of models) {
-        try {
-            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                    'Content-Type': 'application/json',
-                    'HTTP-Referer': 'https://gerador-de-historias-infantis-ia.vercel.app',
-                    'X-Title': 'Gerador de Histórias'
-                },
-                body: JSON.stringify({
-                    model,
-                    messages: [{ role: 'user', content: prompt }],
-                    max_tokens: 500
-                })
-            });
+    const data = await response.json();
 
-            const data = await response.json();
-
-            if (!response.ok) continue;
-
-            return res.status(200).json({
-                story: data.choices[0].message.content,
-                model_used: model
-            });
-
-        } catch (err) {
-            continue;
-        }
+    if (!response.ok) {
+        return res.status(500).json({ error: data.error.message });
     }
 
-    return res.status(500).json({
-        error: "Falha nos modelos"
+    const story = data.choices[0].message.content;
+
+    // 🔹 Salvar história
+    await supabase.from('stories').insert({
+        user_id,
+        prompt,
+        story
     });
+
+    // 🔹 Atualizar uso
+    if (usageData) {
+        await supabase.from('usage')
+            .update({ count: usageData.count + 1 })
+            .eq('id', usageData.id);
+    } else {
+        await supabase.from('usage').insert({
+            user_id,
+            count: 1
+        });
+    }
+
+    return res.status(200).json({ story });
 }
