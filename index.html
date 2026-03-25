@@ -584,77 +584,51 @@
             return data.choices[0].message.content;
         }
 
-        // Gerar história com IA (sistema híbrido)
-        async function generateStory() {
-            formData.lesson = document.getElementById('lesson').value.trim();
-            
-            if (!formData.lesson) {
-                alert('Por favor, insira uma lição para a história.');
-                return;
-            }
+       async function generateStory() {
+    formData.lesson = document.getElementById('lesson').value.trim();
+    
+    if (!formData.lesson) {
+        alert('Por favor, insira uma lição para a história.');
+        return;
+    }
 
-            // Mostrar tela de carregamento
-            nextStep(5);
+    nextStep(5);
 
-            const prompt = `Crie uma história de ninar para uma criança de ${formData.age} anos (${formData.gender}) que adora ${formData.interests.join(', ')}.
+    const prompt = `Crie uma história de ninar para uma criança de ${formData.age} anos (${formData.gender}) que adora ${formData.interests.join(', ')}.
 
 A história deve ser:
 - Escrita em estilo ${formData.style}
 - Ensinar a lição: ${formData.lesson}
-- Apropriada para a hora de dormir (final tranquilizante)
-- Envolvente mas não muito estimulante
-- Com cerca de 300-500 palavras
-- Incluir uma mensagem moral gentil naturalmente entrelaçada na narrativa
+- Apropriada para a hora de dormir
+- 300-500 palavras
+- Português do Brasil`;
 
-Por favor, escreva apenas o conteúdo da história, sem título ou formatação adicional. Escreva em português do Brasil.`;
+    try {
+        const response = await fetch('/api/generate-story', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prompt })
+        });
 
-            try {
-                let story;
-                
-                // Tentar Claude.ai primeiro (se não estiver forçando OpenRouter)
-                if (!apiConfig.useOpenRouter) {
-                    try {
-                        console.log('🔵 Tentando gerar com Claude.ai...');
-                        story = await generateWithClaudeAI(prompt);
-                        console.log('✅ História gerada com Claude.ai!');
-                    } catch (claudeError) {
-                        console.log('⚠️ Claude.ai falhou, tentando OpenRouter...');
-                        story = await generateWithOpenRouter(prompt);
-                        console.log('✅ História gerada com OpenRouter!');
-                    }
-                } else {
-                    // Usar OpenRouter diretamente
-                    try {
-                        console.log('🟢 Gerando com OpenRouter...');
-                        story = await generateWithOpenRouter(prompt);
-                        console.log('✅ História gerada com OpenRouter!');
-                    } catch (openRouterError) {
-                        console.log('⚠️ OpenRouter falhou, tentando Claude.ai...');
-                        story = await generateWithClaudeAI(prompt);
-                        console.log('✅ História gerada com Claude.ai!');
-                    }
-                }
+        const data = await response.json();
 
-                // Mostrar história
-                document.getElementById('storyContent').innerHTML = story.replace(/\n/g, '<br><br>');
-                nextStep(6);
-            } catch (error) {
-                console.error('❌ Erro ao gerar história:', error);
-                
-                // Oferecer configurar OpenRouter se ambas falharam
-                const configKey = confirm('Desculpe, não foi possível gerar a história.\n\n' + 
-                    'Deseja configurar uma chave da OpenRouter para usar como alternativa?');
-                
-                if (configKey) {
-                    showApiConfig();
-                    // Tentar novamente após configurar
-                    setTimeout(() => generateStory(), 500);
-                } else {
-                    alert('Por favor, tente novamente mais tarde.');
-                    prevStep(4);
-                }
-            }
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro');
         }
+
+        document.getElementById('storyContent').innerHTML =
+            data.story.replace(/\n/g, '<br><br>');
+
+        nextStep(6);
+
+    } catch (error) {
+        console.error(error);
+        alert('Erro ao gerar história. Tente novamente.');
+        prevStep(4);
+    }
+}
 
         // Resetar formulário
         function resetForm() {
