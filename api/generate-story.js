@@ -1,5 +1,5 @@
 import { getDatabase } from './_lib/database.js';
-import { jsonError, requireUser } from './_lib/supabase.js';
+import { jsonError, requireUser } from './_lib/neon-auth.js';
 
 const MAX_FIELD_LENGTH = 160;
 
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   let reserved = false;
   const releaseReservation = async () => {
     if (!reserved || !sql || !userId) return;
-    await sql`SELECT public.release_story_usage(${userId}::uuid)`;
+    await sql`SELECT public.release_story_usage(${userId})`;
     reserved = false;
   };
   try {
@@ -36,10 +36,10 @@ export default async function handler(req, res) {
     if (!process.env.OPENAI_API_KEY) return jsonError(res, 503, 'A geração de histórias ainda não está configurada.');
 
     sql = getDatabase();
-    await sql`INSERT INTO public.profiles (id) VALUES (${userId}::uuid) ON CONFLICT (id) DO NOTHING`;
-    const [profiles] = await sql`SELECT plan FROM public.profiles WHERE id = ${userId}::uuid`;
+    await sql`INSERT INTO public.profiles (id) VALUES (${userId}) ON CONFLICT (id) DO NOTHING`;
+    const [profiles] = await sql`SELECT plan FROM public.profiles WHERE id = ${userId}`;
     const limit = profiles?.plan === 'pro' ? 100 : 3;
-    const [quotaRow] = await sql`SELECT public.reserve_story_usage(${userId}::uuid, ${limit}::integer) AS reservation`;
+    const [quotaRow] = await sql`SELECT public.reserve_story_usage(${userId}, ${limit}::integer) AS reservation`;
     const reservation = quotaRow.reservation;
     if (!reservation.allowed) {
       return res.status(429).json({ error: 'Você atingiu o limite diário do seu plano.', usage: reservation.count ?? limit, limit });
@@ -82,7 +82,7 @@ export default async function handler(req, res) {
       return jsonError(res, 502, 'A IA retornou uma resposta vazia. Tente novamente.');
     }
 
-    await sql`INSERT INTO public.stories (user_id, prompt, story) VALUES (${userId}::uuid, ${prompt}, ${story})`;
+    await sql`INSERT INTO public.stories (user_id, prompt, story) VALUES (${userId}, ${prompt}, ${story})`;
     reserved = false;
     return res.status(200).json({ story, usage: reservation.count, limit });
   } catch (error) {
