@@ -1,17 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE;
-
-export function getAdminClient() {
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Supabase não está configurado no servidor.');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
 
 export async function requireUser(req) {
   const authorization = req.headers.authorization || '';
