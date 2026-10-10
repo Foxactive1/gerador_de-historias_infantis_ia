@@ -10,7 +10,7 @@ function getJwks() {
 }
 
 export async function requireUser(req) {
-  const match = (req.headers.authorization || '').match(/^Bearer\\s+(.+)$/i);
+  const match = (req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
   if (!match) return { error: 'Faça login para continuar.', status: 401 };
 
   const issuer = process.env.NEON_AUTH_BASE_URL;
