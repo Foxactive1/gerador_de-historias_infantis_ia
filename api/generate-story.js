@@ -13,9 +13,10 @@ export default async function handler(req, res) {
   let sql;
   let userId;
   let reserved = false;
+  let reservedDate;
   const releaseReservation = async () => {
-    if (!reserved || !sql || !userId) return;
-    await sql`SELECT public.release_story_usage(${userId})`;
+    if (!reserved || !sql || !userId || !reservedDate) return;
+    await sql`SELECT public.release_story_usage(${userId}, ${reservedDate}::date)`;
     reserved = false;
   };
   try {
@@ -44,6 +45,7 @@ export default async function handler(req, res) {
     if (!reservation.allowed) {
       return res.status(429).json({ error: 'Você atingiu o limite diário do seu plano.', usage: reservation.count ?? limit, limit });
     }
+    reservedDate = reservation.usage_date;
     reserved = true;
 
     const prompt = [
