@@ -1,216 +1,46 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gerador de Histórias IA</title>
-
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-<style>
-body {
-    background: linear-gradient(135deg,#667eea,#764ba2);
-    min-height: 100vh;
-    color: white;
-}
-
-.card {
-    border-radius: 20px;
-}
-
-.hidden { display:none; }
-</style>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#6b4eff">
+  <title>Histórias Mágicas | InNovaIdeia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root{--ink:#252044;--muted:#726d86;--purple:#6b4eff}body{min-height:100vh;color:var(--ink);font-family:Nunito,system-ui,sans-serif;background:radial-gradient(circle at 8% 8%,#fff4ca 0,transparent 25%),radial-gradient(circle at 94% 18%,#f6dfff 0,transparent 28%),#f7f5ff}.shell{max-width:980px}.brand{color:var(--purple);font-weight:900;letter-spacing:-.04em}.hero{padding:2.5rem 1rem 1.5rem;text-align:center}.hero h1{font-weight:900;letter-spacing:-.05em;font-size:clamp(2rem,5vw,3.5rem)}.hero p{color:var(--muted);max-width:580px;margin:.7rem auto 0}.card{border:1px solid #ece8fb;border-radius:22px;box-shadow:0 12px 35px #34236a0d}.btn-primary{--bs-btn-bg:var(--purple);--bs-btn-border-color:var(--purple);--bs-btn-hover-bg:#553bdd;--bs-btn-hover-border-color:#553bdd;font-weight:800}.btn-light{border:1px solid #e9e4f7;font-weight:800}.form-control,.form-select{border-color:#e5e0f1;border-radius:12px;padding:.75rem .9rem}.form-control:focus,.form-select:focus{border-color:#9a88ff;box-shadow:0 0 0 .2rem #6b4eff20}.story{white-space:pre-wrap;line-height:1.85;font-size:1.08rem}.badge-plan{background:#eeeaff;color:#583de0}.history-item{border:0;border-top:1px solid #f0edf7;padding:1rem 0}.muted{color:var(--muted)}[hidden]{display:none!important}@media(max-width:575px){.hero{padding-top:1.5rem}.card{border-radius:18px}}
+  </style>
 </head>
-
 <body>
-
-<div class="container py-5">
-
-<h2 class="text-center mb-4">📖 Gerador de Histórias com IA</h2>
-
-<!-- LOGIN -->
-<div id="loginBox" class="text-center">
-    <button class="btn btn-light" onclick="login()">
-        🔐 Entrar com Google
-    </button>
-</div>
-
-<!-- APP -->
-<div id="app" class="hidden">
-
-    <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <strong id="userEmail"></strong><br>
-            Plano: <span id="plan"></span>
-        </div>
-
-        <div>
-            <button class="btn btn-warning btn-sm" onclick="upgrade()">
-                Upgrade 🚀
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="logout()">
-                Sair
-            </button>
-        </div>
+<main class="container shell pb-5">
+  <header class="d-flex justify-content-between align-items-center py-3"><a class="brand text-decoration-none fs-4" href="#">✦ Histórias Mágicas</a><span class="small muted">por InNovaIdeia</span></header>
+  <section class="hero"><div class="fs-1 mb-2" aria-hidden="true">📚✨</div><h1>Uma história só sua</h1><p>Escolha os detalhes e crie uma aventura especial, feita para despertar a imaginação.</p></section>
+  <div id="notice" class="alert" role="status" hidden></div>
+  <section id="loginBox" class="card p-4 p-md-5 text-center mx-auto" style="max-width:520px" hidden><h2 class="h4 fw-bold">Entre para começar</h2><p class="muted mb-4">Suas histórias ficam guardadas na sua conta.</p><button id="loginButton" class="btn btn-primary btn-lg">Continuar com Google</button></section>
+  <section id="app" hidden>
+    <div class="card p-3 p-md-4 mb-4"><div class="d-flex flex-wrap justify-content-between align-items-center gap-3"><div><div id="userEmail" class="fw-bold"></div><span class="badge rounded-pill badge-plan" id="plan"></span><span class="small muted ms-2">Hoje: <strong id="usage">0</strong> histórias</span></div><div class="d-flex gap-2"><button id="upgradeButton" class="btn btn-warning fw-bold">Plano Pro ✨</button><button id="logoutButton" class="btn btn-light">Sair</button></div></div></div>
+    <div class="card p-4 p-md-5 mb-4"><h2 class="h4 fw-bold mb-1">Vamos imaginar?</h2><p class="muted mb-4">Conte um pouco sobre a aventura. Não inclua nomes completos ou informações pessoais da criança.</p>
+      <form id="storyForm" class="row g-3">
+        <div class="col-sm-4"><label for="age" class="form-label fw-bold">Idade</label><select id="age" class="form-select" required><option value="">Escolha</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
+        <div class="col-sm-8"><label for="interests" class="form-label fw-bold">O que a criança gosta?</label><input id="interests" class="form-control" maxlength="160" placeholder="Ex.: dinossauros, espaço e amizade" required></div>
+        <div class="col-md-6"><label for="style" class="form-label fw-bold">Clima da aventura</label><input id="style" class="form-control" maxlength="160" placeholder="Ex.: divertida e mágica" required></div>
+        <div class="col-md-6"><label for="lesson" class="form-label fw-bold">Valor ou aprendizado</label><input id="lesson" class="form-control" maxlength="160" placeholder="Ex.: compartilhar e cooperar" required></div>
+        <div class="col-12"><button id="generateButton" class="btn btn-primary btn-lg w-100" type="submit">Criar minha história ✨</button><div id="formHelp" class="form-text text-center mt-2">Plano gratuito: até 3 histórias por dia.</div></div>
+      </form>
     </div>
-
-    <!-- USO -->
-    <div class="alert alert-info">
-        Uso hoje: <strong id="usage"></strong>
-    </div>
-
-    <!-- FORM -->
-    <div class="card p-3 mb-3 bg-light text-dark">
-        <input id="age" class="form-control mb-2" placeholder="Idade">
-        <input id="interests" class="form-control mb-2" placeholder="Interesses (ex: animais, magia)">
-        <input id="style" class="form-control mb-2" placeholder="Estilo (ex: mágico)">
-        <textarea id="lesson" class="form-control mb-2" placeholder="Lição"></textarea>
-
-        <button class="btn btn-success" onclick="generate()">
-            Gerar História ✨
-        </button>
-    </div>
-
-    <!-- RESULT -->
-    <div id="result" class="card p-3 mb-3 bg-warning text-dark hidden"></div>
-
-    <!-- HISTÓRICO -->
-    <div class="card p-3 bg-dark">
-        <h5>📚 Histórico</h5>
-        <ul id="history" class="list-group"></ul>
-    </div>
-
-</div>
-
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
+    <article id="result" class="card p-4 p-md-5 mb-4" hidden aria-live="polite"><div class="small text-uppercase fw-bold mb-2" style="color:var(--purple)">Sua nova aventura</div><div id="storyText" class="story"></div></article>
+    <section class="card p-4 p-md-5"><div class="d-flex align-items-center justify-content-between mb-2"><h2 class="h4 fw-bold mb-0">Suas histórias</h2><span class="muted small">Salvas nesta conta</span></div><div id="history" class="mt-3"></div></section>
+  </section>
+  <footer class="text-center small muted mt-4">Histórias criativas para compartilhar bons momentos. ✦</footer>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const supabase = supabase.createClient(
-    'SEU_SUPABASE_URL',
-    'SEU_PUBLIC_KEY'
-);
-
-// 🔐 LOGIN
-async function login() {
-    await supabase.auth.signInWithOAuth({ provider: 'google' });
-}
-
-// 🔓 LOGOUT
-async function logout() {
-    await supabase.auth.signOut();
-    location.reload();
-}
-
-// 🚀 UPGRADE
-async function upgrade() {
-    const { data: { user } } = await supabase.auth.getUser();
-
-    const res = await fetch('/api/create-checkout', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-            user_id: user.id,
-            email: user.email
-        })
-    });
-
-    const data = await res.json();
-    window.location.href = data.url;
-}
-
-// 📊 CARREGAR DASHBOARD
-async function loadApp() {
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    document.getElementById('loginBox').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-
-    document.getElementById('userEmail').innerText = user.email;
-
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-    document.getElementById('plan').innerText = profile.plan;
-
-    const today = new Date().toISOString().slice(0,10);
-
-    const { data: usage } = await supabase
-        .from('usage')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .single();
-
-    document.getElementById('usage').innerText =
-        usage ? usage.count : 0;
-
-    loadHistory(user.id);
-}
-
-// 📚 HISTÓRICO
-async function loadHistory(userId) {
-    const { data } = await supabase
-        .from('stories')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-    const ul = document.getElementById('history');
-    ul.innerHTML = '';
-
-    data.forEach(s => {
-        ul.innerHTML += `
-            <li class="list-group-item">
-                ${s.story.substring(0,120)}...
-            </li>`;
-    });
-}
-
-// ✨ GERAR HISTÓRIA
-async function generate() {
-    const { data: { user } } = await supabase.auth.getUser();
-
-    const prompt = `
-Criança de ${document.getElementById('age').value} anos,
-Interesses: ${document.getElementById('interests').value},
-Estilo: ${document.getElementById('style').value},
-Lição: ${document.getElementById('lesson').value}
-`;
-
-    const res = await fetch('/api/generate-story', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-            prompt,
-            user_id: user.id
-        })
-    });
-
-    const data = await res.json();
-
-    if (data.error) {
-        alert(data.error);
-        return;
-    }
-
-    const result = document.getElementById('result');
-    result.classList.remove('hidden');
-    result.innerHTML = data.story;
-
-    loadApp();
-}
-
-// INIT
-loadApp();
+  const $=id=>document.getElementById(id);let supabaseClient;let currentUser;
+  function showNotice(message,kind='danger'){const box=$('notice');box.className=`alert alert-${kind}`;box.textContent=message;box.hidden=false}
+  async function api(path,session,body){const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify(body)});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Não foi possível concluir a solicitação.');return data}
+  async function loadHistory(){const list=$('history');list.replaceChildren();const{data,error}=await supabaseClient.from('stories').select('id,story,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);if(error){list.textContent='Não foi possível carregar o histórico.';return}if(!data?.length){list.textContent='Sua primeira história está esperando por você.';list.className='mt-3 muted';return}list.className='mt-3';data.forEach(item=>{const row=document.createElement('details');row.className='history-item';const summary=document.createElement('summary');summary.className='fw-bold';summary.textContent=item.story.split('\n').find(line=>line.trim())?.slice(0,100)||'História sem título';const story=document.createElement('p');story.className='story muted mt-3 mb-0';story.textContent=item.story;row.append(summary,story);list.append(row)})}
+  async function loadApp(){const{data:{session}}=await supabaseClient.auth.getSession();currentUser=session?.user;$('loginBox').hidden=Boolean(currentUser);$('app').hidden=!currentUser;if(!currentUser)return;$('userEmail').textContent=currentUser.email||'Conta conectada';const[{data:profile},{data:usage}]=await Promise.all([supabaseClient.from('profiles').select('plan').eq('id',currentUser.id).maybeSingle(),supabaseClient.from('usage').select('count').eq('user_id',currentUser.id).eq('usage_date',new Date().toISOString().slice(0,10)).maybeSingle()]);const isPro=profile?.plan==='pro';$('plan').textContent=isPro?'Plano Pro':'Plano gratuito';$('usage').textContent=usage?.count??0;$('upgradeButton').hidden=isPro;$('formHelp').textContent=isPro?'Plano Pro: até 100 histórias por dia.':'Plano gratuito: até 3 histórias por dia.';await loadHistory()}
+  async function start(){try{if(!window.supabase?.createClient)throw new Error('Não foi possível carregar o serviço de autenticação. Atualize a página.');const configResponse=await fetch('/api/config',{cache:'no-store'});const config=await configResponse.json();if(!configResponse.ok)throw new Error(config.error||'Configuração do aplicativo indisponível.');supabaseClient=window.supabase.createClient(config.supabaseUrl,config.supabaseAnonKey);const params=new URLSearchParams(location.search);if(params.get('checkout')==='success')showNotice('Pagamento confirmado. Seu plano será atualizado assim que o Stripe enviar a confirmação.','success');if(params.get('checkout')==='cancelled')showNotice('Checkout cancelado. Você pode continuar usando o plano atual.','info');$('loginButton').addEventListener('click',async()=>{const{error}=await supabaseClient.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}});if(error)showNotice(`Falha no login: ${error.message}`)});$('logoutButton').addEventListener('click',async()=>{await supabaseClient.auth.signOut();location.reload()});$('upgradeButton').addEventListener('click',async()=>{try{const{data:{session}}=await supabaseClient.auth.getSession();const checkout=await api('/api/create-checkout',session,{});location.assign(checkout.url)}catch(error){showNotice(error.message)}});$('storyForm').addEventListener('submit',async event=>{event.preventDefault();if(!$('storyForm').reportValidity())return;$('generateButton').disabled=true;$('generateButton').textContent='Criando sua aventura…';try{const{data:{session}}=await supabaseClient.auth.getSession();const result=await api('/api/generate-story',session,{age:$('age').value,interests:$('interests').value,style:$('style').value,lesson:$('lesson').value});$('storyText').textContent=result.story;$('result').hidden=false;$('usage').textContent=result.usage;await loadHistory();$('result').scrollIntoView({behavior:'smooth',block:'start'})}catch(error){showNotice(error.message)}finally{$('generateButton').disabled=false;$('generateButton').textContent='Criar minha história ✨'}});supabaseClient.auth.onAuthStateChange(()=>{setTimeout(()=>loadApp().catch(()=>showNotice('Não foi possível carregar sua conta.')),0)});await loadApp()}catch(error){$('loginBox').hidden=true;showNotice(error.message)}}
+  start();
 </script>
-
 </body>
 </html>
