@@ -50,6 +50,11 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
 for each row execute function public.handle_new_user();
 
+-- Backfill accounts that existed before this schema was installed.
+insert into public.profiles (id)
+select id from auth.users
+on conflict (id) do nothing;
+
 alter table public.profiles enable row level security;
 alter table public.stories enable row level security;
 alter table public.usage enable row level security;
