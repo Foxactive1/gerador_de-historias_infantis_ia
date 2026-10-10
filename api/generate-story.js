@@ -1,4 +1,5 @@
-import { getAdminClient, jsonError, requireUser } from './_lib/supabase.js';
+import { getDatabase } from './_lib/database.js';
+import { jsonError, requireUser } from './_lib/neon-auth.js';
 
 const MAX_FIELD_LENGTH = 160;
 
@@ -9,14 +10,14 @@ function cleanField(value) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return jsonError(res, 405, 'Método não permitido.');
 
-  let supabase;
+  let sql;
   let userId;
   let reserved = false;
+  let reservedDate;
   const releaseReservation = async () => {
-    if (!reserved || !supabase || !userId) return;
-    const { error } = await supabase.rpc('release_story_usage', { p_user_id: userId });
+    if (!reserved || !sql || !userId || !reservedDate) return;
+    await sql`SELECT public.release_story_usage(${userId}, ${reservedDate}::date)`;
     reserved = false;
-    if (error) console.error('Falha ao liberar reserva de uso:', error.message);
   };
   try {
     const auth = await requireUser(req);
@@ -35,19 +36,16 @@ export default async function handler(req, res) {
     }
     if (!process.env.OPENAI_API_KEY) return jsonError(res, 503, 'A geração de histórias ainda não está configurada.');
 
-    supabase = getAdminClient();
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles').select('plan').eq('id', auth.user.id).maybeSingle();
-    if (profileError) throw profileError;
-    const limit = profile?.plan === 'pro' ? 100 : 3;
-    const { data: reservation, error: reservationError } = await supabase.rpc('reserve_story_usage', {
-      p_user_id: auth.user.id,
-      p_daily_limit: limit,
-    });
-    if (reservationError) throw reservationError;
-    if (!reservation?.allowed) {
-      return res.status(429).json({ error: 'Você atingiu o limite diário do seu plano.', usage: reservation?.count ?? limit, limit });
+    sql = getDatabase();
+    await sql`INSERT INTO public.profiles (id) VALUES (${userId}) ON CONFLICT (id) DO NOTHING`;
+    const [profiles] = await sql`SELECT plan FROM public.profiles WHERE id = ${userId}`;
+    const limit = profiles?.plan === 'pro' ? 100 : 3;
+    const [quotaRow] = await sql`SELECT public.reserve_story_usage(${userId}, ${limit}::integer) AS reservation`;
+    const reservation = quotaRow.reservation;
+    if (!reservation.allowed) {
+      return res.status(429).json({ error: 'Você atingiu o limite diário do seu plano.', usage: reservation.count ?? limit, limit });
     }
+    reservedDate = reservation.usage_date;
     reserved = true;
 
     const prompt = [
@@ -86,8 +84,7 @@ export default async function handler(req, res) {
       return jsonError(res, 502, 'A IA retornou uma resposta vazia. Tente novamente.');
     }
 
-    const { error: saveError } = await supabase.from('stories').insert({ user_id: auth.user.id, prompt, story });
-    if (saveError) throw saveError;
+    await sql`INSERT INTO public.stories (user_id, prompt, story) VALUES (${userId}, ${prompt}, ${story})`;
     reserved = false;
     return res.status(200).json({ story, usage: reservation.count, limit });
   } catch (error) {

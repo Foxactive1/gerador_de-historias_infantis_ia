@@ -3,5 +3,8 @@
     "api/webhook.js": {
       "includeFiles": "api/**"
     }
-  }
+  },
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite"
 }

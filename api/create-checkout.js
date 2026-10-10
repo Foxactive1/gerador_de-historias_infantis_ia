@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { jsonError, requireUser } from './_lib/supabase.js';
+import { jsonError, requireUser } from './_lib/neon-auth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return jsonError(res, 405, 'Método não permitido.');

@@ -3,10 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check api/config.js && node --check api/generate-story.js && node --check api/create-checkout.js && node --check api/webhook.js && node --check api/_lib/supabase.js"
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "check": "node --check src/main.js && node --check api/account.js && node --check api/generate-story.js && node --check api/create-checkout.js && node --check api/webhook.js && node --check api/_lib/neon-auth.js && node --check api/_lib/database.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.57.0",
+    "@neondatabase/auth": "^0.5.0-beta",
+    "@neondatabase/serverless": "^1.0.2",
+    "jose": "^6.2.5",
     "stripe": "^18.5.0"
+  },
+  "devDependencies": {
+    "vite": "^7.1.12"
   }
 }
