@@ -1,0 +1,12 @@
+{
+  "name": "gerador-de-historias-infantis-ia",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check api/config.js && node --check api/generate-story.js && node --check api/create-checkout.js && node --check api/webhook.js && node --check api/_lib/supabase.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.0",
+    "stripe": "^18.5.0"
+  }
+}
