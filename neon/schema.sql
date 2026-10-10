@@ -1,9 +1,9 @@
--- Neon PostgreSQL schema. Supabase Auth remains the identity provider; user IDs
--- below are copied from the verified JWT subject by the trusted API server.
--- Neon stores app data and is never accessed directly by the browser.
+-- Application schema for Neon PostgreSQL + Neon Managed Auth.
+-- Neon Auth manages its own tables in neon_auth. This script creates only app data.
+create extension if not exists pgcrypto;
 
 create table if not exists public.profiles (
-  id uuid primary key,
+  id text primary key,
   plan text not null default 'free' check (plan in ('free', 'pro')),
   stripe_customer_id text unique,
   stripe_subscription_id text unique,
@@ -13,7 +13,7 @@ create table if not exists public.profiles (
 
 create table if not exists public.stories (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
+  user_id text not null,
   prompt text not null,
   story text not null,
   created_at timestamptz not null default now()
@@ -22,12 +22,17 @@ create index if not exists stories_user_created_idx on public.stories(user_id, c
 
 create table if not exists public.usage (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
+  user_id text not null,
   usage_date date not null default (now() at time zone 'utc')::date,
   count integer not null default 0 check (count >= 0),
   unique (user_id, usage_date)
 );
 create index if not exists usage_user_date_idx on public.usage(user_id, usage_date desc);
+
+-- Upgrade an existing Neon-only installation from UUID IDs to Neon Auth string IDs.
+alter table public.profiles alter column id type text using id::text;
+alter table public.stories alter column user_id type text using user_id::text;
+alter table public.usage alter column user_id type text using user_id::text;
 
 create or replace function public.set_updated_at()
 returns trigger language plpgsql set search_path = '' as $$
@@ -40,9 +45,10 @@ drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at before update on public.profiles
 for each row execute function public.set_updated_at();
 
--- This runs in the same transaction as the insert/update and serializes quota
--- reservations per user and day, including simultaneous serverless requests.
-create or replace function public.reserve_story_usage(p_user_id uuid, p_daily_limit integer)
+-- Serialize quota reservations per user and UTC day, including concurrent API calls.
+drop function if exists public.reserve_story_usage(uuid, integer);
+drop function if exists public.reserve_story_usage(text, integer);
+create function public.reserve_story_usage(p_user_id text, p_daily_limit integer)
 returns jsonb language plpgsql set search_path = '' as $$
 declare
   today_utc date := (now() at time zone 'utc')::date;
@@ -73,7 +79,9 @@ begin
 end;
 $$;
 
-create or replace function public.release_story_usage(p_user_id uuid)
+drop function if exists public.release_story_usage(uuid);
+drop function if exists public.release_story_usage(text);
+create function public.release_story_usage(p_user_id text)
 returns void language plpgsql set search_path = '' as $$
 begin
   update public.usage as u set count = greatest(u.count - 1, 0)
@@ -81,9 +89,8 @@ begin
 end;
 $$;
 
-revoke all on function public.reserve_story_usage(uuid, integer) from public;
-revoke all on function public.release_story_usage(uuid) from public;
+revoke all on function public.reserve_story_usage(text, integer) from public;
+revoke all on function public.release_story_usage(text) from public;
 
--- The Neon connection string is a server-only secret. Do not put it in browser
--- code or grant it to end users. API routes validate Supabase Auth tokens and
--- apply user_id filters to every profile/story/usage query.
+-- DATABASE_URL is server-only. API handlers validate Neon Auth JWTs and scope
+-- every query by the authenticated subject before accessing application data.
