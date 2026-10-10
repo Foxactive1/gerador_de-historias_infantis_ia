@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { getAdminClient } from './_lib/supabase.js';
+import { getDatabase } from './_lib/database.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -29,27 +29,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    const supabase = getAdminClient();
+    const sql = getDatabase();
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const userId = session.metadata?.user_id;
       if (userId && session.mode === 'subscription') {
-        const { error } = await supabase.from('profiles').update({
-          plan: 'pro', stripe_customer_id: session.customer, stripe_subscription_id: session.subscription,
-        }).eq('id', userId);
-        if (error) throw error;
+        await sql`INSERT INTO public.profiles (id, plan, stripe_customer_id, stripe_subscription_id)
+          VALUES (${userId}::uuid, 'pro', ${session.customer}, ${session.subscription})
+          ON CONFLICT (id) DO UPDATE SET plan = 'pro', stripe_customer_id = EXCLUDED.stripe_customer_id,
+          stripe_subscription_id = EXCLUDED.stripe_subscription_id`;
       }
     } else if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object;
       const userId = subscription.metadata?.user_id;
       if (userId) {
         const active = event.type !== 'customer.subscription.deleted' && ['active', 'trialing'].includes(subscription.status);
-        const { error } = await supabase.from('profiles').update({
-          plan: active ? 'pro' : 'free',
-          stripe_customer_id: subscription.customer,
-          stripe_subscription_id: active ? subscription.id : null,
-        }).eq('id', userId);
-        if (error) throw error;
+        await sql`INSERT INTO public.profiles (id, plan, stripe_customer_id, stripe_subscription_id)
+          VALUES (${userId}::uuid, ${active ? 'pro' : 'free'}, ${subscription.customer}, ${active ? subscription.id : null})
+          ON CONFLICT (id) DO UPDATE SET plan = EXCLUDED.plan, stripe_customer_id = EXCLUDED.stripe_customer_id,
+          stripe_subscription_id = EXCLUDED.stripe_subscription_id`;
       }
     }
     return res.status(200).json({ received: true });
