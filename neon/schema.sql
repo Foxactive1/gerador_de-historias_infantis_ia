@@ -68,29 +68,30 @@ begin
   for update;
 
   if current_count >= p_daily_limit then
-    return jsonb_build_object('allowed', false, 'count', current_count);
+    return jsonb_build_object('allowed', false, 'count', current_count, 'usage_date', today_utc);
   end if;
 
   update public.usage as u set count = u.count + 1
   where u.user_id = p_user_id and u.usage_date = today_utc
   returning u.count into current_count;
 
-  return jsonb_build_object('allowed', true, 'count', current_count);
+  return jsonb_build_object('allowed', true, 'count', current_count, 'usage_date', today_utc);
 end;
 $$;
 
 drop function if exists public.release_story_usage(uuid);
 drop function if exists public.release_story_usage(text);
-create function public.release_story_usage(p_user_id text)
+drop function if exists public.release_story_usage(text, date);
+create function public.release_story_usage(p_user_id text, p_usage_date date)
 returns void language plpgsql set search_path = '' as $$
 begin
   update public.usage as u set count = greatest(u.count - 1, 0)
-  where u.user_id = p_user_id and u.usage_date = (now() at time zone 'utc')::date;
+  where u.user_id = p_user_id and u.usage_date = p_usage_date;
 end;
 $$;
 
 revoke all on function public.reserve_story_usage(text, integer) from public;
-revoke all on function public.release_story_usage(text) from public;
+revoke all on function public.release_story_usage(text, date) from public;
 
 -- DATABASE_URL is server-only. API handlers validate Neon Auth JWTs and scope
 -- every query by the authenticated subject before accessing application data.
