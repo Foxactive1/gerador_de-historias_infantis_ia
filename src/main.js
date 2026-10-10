@@ -51,7 +51,7 @@ async function loadHistory(stories) {
     row.className = 'history-item';
     const summary = document.createElement('summary');
     summary.className = 'fw-bold';
-    summary.textContent = item.story.split('\\n').find((line) => line.trim())?.slice(0, 100) || 'História sem título';
+    summary.textContent = item.story.split(/\r?\n/).find((line) => line.trim())?.slice(0, 100) || 'História sem título';
     const story = document.createElement('p');
     story.className = 'story muted mt-3 mb-0';
     story.textContent = item.story;
